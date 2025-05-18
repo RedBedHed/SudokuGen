@@ -85,7 +85,7 @@ class Grid:
             start_s += 1 + (6 & -(o % SUB_SIZE == 2))
             start_c += VEC_SIZE
 
-    # is the assignment at (i, j) consistent?
+    # Is the assignment at (i, j) consistent?
     def is_consistent_assignment(self, i, j):
         ri = i - (i % 3)
         rj = j - (j % 3)
@@ -130,7 +130,7 @@ class Grid:
 
         return rev, (x, old)
 
-    # do inference by AC-3.
+    # Do inference by AC-3.
     def do_inference(self, i, j, arcs):
         q = arcs.copy()
         restore = []
@@ -292,7 +292,7 @@ class Grid:
         for i in range(VEC_SIZE):
             for j in range(VEC_SIZE):
                 if not self.is_consistent_assignment(i, j):
-                    print(f"Puzzle is inconsistent: ({i}, {j}).")
+                    print(f"Baseline is inconsistent: ({i}, {j}).")
                     print("Generation failed.")
                     return
 
