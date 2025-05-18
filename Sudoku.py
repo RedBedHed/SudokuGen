@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 """
     ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
@@ -379,7 +380,10 @@ _____________________________________________________
 
 '''
 MAIN
+
+Usage:
+python Sudoku.py <optional int: target_empty>
 '''
 if __name__ == "__main__":
     g = Grid()
-    g.gen_puzzle(target_empty=23)
+    g.gen_puzzle(target_empty=40 if len(sys.argv) == 1 else int(sys.argv[1]))
