@@ -274,6 +274,7 @@ class Grid:
         self.grid[i][j] = 0
         return False
 
+    # Generate a unique puzzle or die trying.
     def gen_puzzle(self, target_empty):
         if target_empty >= DOM_SIZE:
             print(f"Empty square limit exceeded: {target_empty} >= 81.")
@@ -338,6 +339,7 @@ class Grid:
         print(f"Puzzle has {empty} empty squares of {target_empty} requested.")
         self.pretty_print()
 
+    # Print that puzzle.
     def pretty_print(self):
         print("""_____________________________________________________
 
