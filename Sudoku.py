@@ -19,7 +19,7 @@ import sys
     An "efficient" Sudoku Generator derived from Chapter 6 of 
     "Artificial Intelligence: A Modern Approach"
     
-    A one-shot upgrade to my 2020 java solver.
+    A one-shot upgrade to my 2019 java solver.
         
     Version 1.0
 """
