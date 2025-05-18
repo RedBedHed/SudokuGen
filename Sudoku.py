@@ -1,5 +1,4 @@
 import numpy as np
-
 """
     ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
     ██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║
@@ -27,6 +26,8 @@ import numpy as np
 VEC_SIZE = 9
 DOM_SIZE = 81
 SUB_SIZE = 3
+BIG_SIZE = 50
+MAD_SIZE = 60
 
 # Convert a point to a domain index.
 def point_to_domain(i, j):
@@ -44,18 +45,24 @@ A Sudoku Grid represented with a mailbox and a list of domains.
 class Grid:
 
     # Constructor.
-    def __init__(self):
-        # Unary constraint applied to all domains. Value must be an integer in [1,9].
-        self.grid    = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
-        self.domains = [[_ + 1 for _ in range(VEC_SIZE)] for __ in range(DOM_SIZE)]
+    def __init__(self, grid=None):
+        if grid is None:
+            # Unary constraint applied to all domains. Value must be an integer in [1,9].
+            self.grid = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
+            self.domains = [[_ + 1 for _ in range(VEC_SIZE)] for __ in range(DOM_SIZE)]
+
+            # Initialize first row to generate one of 9! grids.
+            r = np.arange(1, 10)
+            np.random.shuffle(r)
+            self.grid[0] = r.tolist()
+            for i in range(VEC_SIZE):
+                self.domains[i] = [self.grid[0][i]]
+        else:
+            self.grid = [grid.grid[__].copy() for __ in range(VEC_SIZE)]
+            self.domains = [grid.domains[__].copy() for __ in range(DOM_SIZE)]
+
         self.step = 0
 
-        # Initialize first row to generate one of 9! grids.
-        r = np.arange(1, 10)
-        np.random.shuffle(r)
-        self.grid[0] = r.tolist()
-        for i in range(VEC_SIZE):
-            self.domains[i] = [self.grid[0][i]]
 
     # Get arcs to neighbors.
     def get_arcs(self, i, j, arcs, exclude):
@@ -203,19 +210,8 @@ class Grid:
 
         return next_dom
 
-    # Check a complete assignment for
-    # consistency.
-    def check_consistency(self):
-        for i in range(VEC_SIZE):
-            for j in range(VEC_SIZE):
-                if not self.is_consistent_assignment(i, j):
-                    print(i, j)
-                    return False
-        print("consistent")
-        return True
-
     # Solve the Sudoku CSP with backtracking.
-    def backtrack(self):
+    def backtrack(self, erase=False):
         # Use MRV (Minimum Remaining Values)
         # to order domains.
         x = self.next_domain()
@@ -224,7 +220,7 @@ class Grid:
 
         # Print step count.
         self.step += 1
-        print(f"step {self.step}")
+        # print(f"step {self.step}")
 
         # Get the domain.
         dom = self.domains[x]
@@ -265,6 +261,11 @@ class Grid:
 
             # Recursively assign.
             if self.backtrack():
+                # if erase:
+                #     # Undo assignments.
+                #     self.undo_inference(restore)
+                #     self.domains[x] = dom
+                #     self.grid[i][j] = 0
                 return True
 
             # Undo assignments made during inference
@@ -276,24 +277,113 @@ class Grid:
         self.grid[i][j] = 0
         return False
 
+    # Check a complete assignment for
+    # consistency.
+    def check_consistency(self):
+
+        return True
+
+    def gen_puzzle(self, target_empty):
+        if target_empty >= DOM_SIZE:
+            print(f"Empty square limit exceeded: {target_empty} >= 81.")
+            print("Generation failed.")
+            return
+
+        if target_empty >= BIG_SIZE:
+            print("Difficult puzzle requested. Please be patient.")
+            if target_empty >= MAD_SIZE:
+                print("Empty square target is excessive.")
+                print("A smaller target will yield similar results.")
+
+        self.backtrack()
+        print(f"Baseline generated in {self.step} steps.")
+
+        for i in range(VEC_SIZE):
+            for j in range(VEC_SIZE):
+                if not self.is_consistent_assignment(i, j):
+                    print(f"Puzzle is inconsistent: ({i}, {j}).")
+                    print("Generation failed.")
+                    return
+
+        print("Baseline is consistent.")
+
+        idx = np.arange(81)
+        idx = idx.tolist()
+
+        steps = 0
+        empty = 0
+        for u in range(target_empty):
+            x = np.random.randint(0, len(idx))
+            x = idx[x]
+            idx.remove(x)
+            i, j = domain_to_point(x)
+
+            if u == 0:
+                self.grid[i][j] = 0
+                self.domains[x] = [_ + 1 for _ in range(VEC_SIZE)]
+                continue
+
+            cnt = 0
+
+            # This is lazy, but whatever.
+            for p in range(VEC_SIZE):
+                g = Grid(self)
+                g.grid[i][j] = p + 1
+                g.domains[x] = [p + 1]
+                if g.is_consistent_assignment(i, j) and g.backtrack(erase=True):
+                    cnt += 1
+
+                steps += g.step
+
+                if target_empty >= MAD_SIZE:
+                    print(f"Executed {steps} verification steps so far.")
+
+            if cnt <= 1:
+                self.grid[i][j] = 0
+                self.domains[x] = [_ + 1 for _ in range(VEC_SIZE)]
+                empty += 1
+
+        print(f"Unique puzzle Generated. {steps} verification steps taken.")
+        print(f"Puzzle has {empty} empty squares of {target_empty} requested.")
+        self.pretty_print()
+
+    def pretty_print(self):
+        print("""_____________________________________________________
+
+    //    / /                                        
+   //___ / /  ___      ___      ___                  
+  / ___   / //   ) ) //   ) ) //   ) ) //   / /      
+ //    / / //   / / //___/ / //___/ / ((___/ /       
+//    / / ((___( ( //       //            / /        
+                                                     
+    //   ) )                                         
+   ((         ___     //         ( )   __      ___   
+     \\     //   ) ) // ||  / / / / //   ) ) //   ) )
+       ) ) //   / / //  || / / / / //   / / ((___/ / 
+((___ / / ((___/ / //   ||/ / / / //   / /   //__   
+_____________________________________________________ 
+        """)
+
+        k = 0
+        for r in self.grid:
+            i = 0
+            print(end=' ')
+            for o in r:
+                if o != 0:
+                    print(o, end=' ')
+                else:
+                    print(' ', end=' ')
+                if i != 8 and i % SUB_SIZE == 2:
+                    print('|', end=' ')
+                i += 1
+            print()
+            if k != 8 and k % SUB_SIZE == 2:
+                print("-------+-------+-------")
+            k += 1
+
 '''
 MAIN
 '''
 if __name__ == "__main__":
     g = Grid()
-    g.backtrack()
-    g.check_consistency()
-
-    k = 0
-    for r in g.grid:
-        i = 0
-        print(end=' ')
-        for o in r:
-            print(o, end=' ')
-            if i != 8 and i % SUB_SIZE == 2:
-                print('|', end=' ')
-            i += 1
-        print()
-        if k != 8 and k % SUB_SIZE == 2:
-            print("-------+-------+-------")
-        k += 1
+    g.gen_puzzle(target_empty=23)
