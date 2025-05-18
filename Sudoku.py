@@ -1,4 +1,5 @@
 import numpy as np
+
 """
     ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
     ██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║
@@ -261,11 +262,6 @@ class Grid:
 
             # Recursively assign.
             if self.backtrack():
-                # if erase:
-                #     # Undo assignments.
-                #     self.undo_inference(restore)
-                #     self.domains[x] = dom
-                #     self.grid[i][j] = 0
                 return True
 
             # Undo assignments made during inference
