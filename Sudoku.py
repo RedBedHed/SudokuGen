@@ -65,7 +65,6 @@ class Grid:
 
         self.step = 0
 
-
     # Get arcs to neighbors.
     def get_arcs(self, i, j, arcs, exclude):
         cell = point_to_domain(i, j)
