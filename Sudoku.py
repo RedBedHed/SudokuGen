@@ -39,7 +39,7 @@ def point_to_domain(i, j):
 def domain_to_point(x):
     return x // VEC_SIZE, x % VEC_SIZE
 
-# Get arcs to neighbors.
+# Cache arcs to neighbors.
 def cache_arcs(i, j):
     arcs = []
     cell = point_to_domain(i, j)
@@ -61,15 +61,18 @@ def cache_arcs(i, j):
 
     return arcs
 
-all_arcs = [[cache_arcs(i, j) for j in range(VEC_SIZE)] for i in range(VEC_SIZE)]
+# Cache arcs to neighbors.
+ALL_ARCS = [[cache_arcs(i, j) for j in range(VEC_SIZE)] for i in range(VEC_SIZE)]
 
+# Get and filter arcs to neighbors.
 def get_filter_arcs(i, j, q, remove):
-    for arc in all_arcs[i][j]:
+    for arc in ALL_ARCS[i][j]:
         if arc[0] != remove:
             q.append(arc)
 
+# Get arcs to neighbors.
 def get_arcs(i, j):
-    return all_arcs[i][j].copy()
+    return ALL_ARCS[i][j].copy()
 
 """
 Class: Grid
@@ -80,7 +83,6 @@ class Grid:
 
     # Constructor.
     def __init__(self, grid=None):
-
         if grid is None:
             # Unary constraint applied to all domains. Value must be an integer in [1,9].
             self.grid = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
