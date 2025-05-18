@@ -274,12 +274,6 @@ class Grid:
         self.grid[i][j] = 0
         return False
 
-    # Check a complete assignment for
-    # consistency.
-    def check_consistency(self):
-
-        return True
-
     def gen_puzzle(self, target_empty):
         if target_empty >= DOM_SIZE:
             print(f"Empty square limit exceeded: {target_empty} >= 81.")
