@@ -166,13 +166,9 @@ class Grid:
         for i in range(len(dom)):
             v = dom[i]
             for x, _ in arcs:
-                sat = False
                 for vx in self.domains[x]:
-                    if v != vx:
-                        sat = True
-
-                if not sat:
-                    cnt[i] += 1
+                    if v == vx:
+                        cnt[i] += 1
 
         return cnt
 
