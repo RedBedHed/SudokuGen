@@ -39,6 +39,38 @@ def point_to_domain(i, j):
 def domain_to_point(x):
     return x // VEC_SIZE, x % VEC_SIZE
 
+# Get arcs to neighbors.
+def cache_arcs(i, j):
+    arcs = []
+    cell = point_to_domain(i, j)
+    start_r = i * VEC_SIZE
+    start_c = j
+    start_s = point_to_domain(i - (i % SUB_SIZE), j - (j % SUB_SIZE))
+
+    # 1-9
+    for o in range(start_r, start_r + VEC_SIZE):
+        if o != cell:
+            arcs.append((o, cell))
+        if start_c != cell:
+            arcs.append((start_c, cell))
+        if start_s != cell:
+            arcs.append((start_s, cell))
+
+        start_s += 1 + (6 & -(o % SUB_SIZE == 2))
+        start_c += VEC_SIZE
+
+    return arcs
+
+all_arcs = [[cache_arcs(i, j) for j in range(VEC_SIZE)] for i in range(VEC_SIZE)]
+
+def get_filter_arcs(i, j, q, remove):
+    for arc in all_arcs[i][j]:
+        if arc[0] != remove:
+            q.append(arc)
+
+def get_arcs(i, j):
+    return all_arcs[i][j].copy()
+
 """
 Class: Grid
 
@@ -48,6 +80,7 @@ class Grid:
 
     # Constructor.
     def __init__(self, grid=None):
+
         if grid is None:
             # Unary constraint applied to all domains. Value must be an integer in [1,9].
             self.grid = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
@@ -64,25 +97,6 @@ class Grid:
             self.domains = [grid.domains[__].copy() for __ in range(DOM_SIZE)]
 
         self.step = 0
-
-    # Get arcs to neighbors.
-    def get_arcs(self, i, j, arcs, exclude):
-        cell = point_to_domain(i, j)
-        start_r = i * VEC_SIZE
-        start_c = j
-        start_s = point_to_domain(i - (i % SUB_SIZE), j - (j % SUB_SIZE))
-
-        # 1-9
-        for o in range(start_r, start_r + VEC_SIZE):
-            if o != cell and o != exclude:
-                arcs.append((o, cell))
-            if start_c != cell and start_c != exclude:
-                arcs.append((start_c, cell))
-            if start_s != cell and start_s != exclude:
-                arcs.append((start_s, cell))
-
-            start_s += 1 + (6 & -(o % SUB_SIZE == 2))
-            start_c += VEC_SIZE
 
     # Is the assignment at (i, j) consistent?
     def is_consistent_assignment(self, i, j):
@@ -130,7 +144,7 @@ class Grid:
         return rev, (x, old)
 
     # Do inference by AC-3.
-    def do_inference(self, i, j, arcs):
+    def do_inference(self, arcs):
         q = arcs.copy()
         restore = []
         while len(q) > 0:
@@ -148,7 +162,7 @@ class Grid:
                 return False, restore
 
             i, j = domain_to_point(x)
-            self.get_arcs(i, j, q, y)
+            get_filter_arcs(i, j, q, y)
 
         return True, restore
 
@@ -166,9 +180,7 @@ class Grid:
         for i in range(len(dom)):
             v = dom[i]
             for x, _ in arcs:
-                for vx in self.domains[x]:
-                    if v == vx:
-                        cnt[i] += 1
+                cnt[i] += v in self.domains[x]
 
         return cnt
 
@@ -224,8 +236,7 @@ class Grid:
         i, j = domain_to_point(x)
 
         # Get arcs to neighbors.
-        arcs = []
-        self.get_arcs(i, j, arcs, DOM_SIZE)
+        arcs = get_arcs(i, j)
 
         # Score the values of the domain using
         # its neighbors, for incremental sorting.
@@ -250,7 +261,7 @@ class Grid:
 
             # Do inference, in our case MAC
             # (Maintaining Arc Consistency via AC-3).
-            infer, restore = self.do_inference(i, j, arcs)
+            infer, restore = self.do_inference(arcs)
             if not infer:
                 # Undo assignments if inference failed.
                 self.undo_inference(restore)
