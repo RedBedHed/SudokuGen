@@ -208,7 +208,7 @@ class Grid:
         return next_dom
 
     # Solve the Sudoku CSP with backtracking.
-    def backtrack(self, erase=False):
+    def backtrack(self):
         # Use MRV (Minimum Remaining Values)
         # to order domains.
         x = self.next_domain()
@@ -317,7 +317,7 @@ class Grid:
                 g = Grid(self)
                 g.grid[i][j] = p + 1
                 g.domains[x] = [p + 1]
-                if g.is_consistent_assignment(i, j) and g.backtrack(erase=True):
+                if g.is_consistent_assignment(i, j) and g.backtrack():
                     cnt += 1
 
                 steps += g.step
@@ -346,7 +346,7 @@ class Grid:
                                       //__              
     //   ) )                                         
    ((         ___     //         ( )   __      ___   
-     \\     //   ) ) // ||  / / / / //   ) ) //   ) )
+      \\     //   ) ) // ||  / / / / //   ) ) //   ) )
        ) ) //   / / //  || / / / / //   / / ((___/ / 
 ((___ / / ((___/ / //   ||/ / / / //   / /   //__   
 _____________________________________________________ 
