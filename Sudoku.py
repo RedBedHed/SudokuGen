@@ -225,7 +225,7 @@ class Grid:
 
         return next_dom
 
-    # Get all arcs from complete cells.
+    # Check all arcs from complete cells.
     def establish_arc_consistency(self):
         for i in range(VEC_SIZE):
             for j in range(VEC_SIZE):
