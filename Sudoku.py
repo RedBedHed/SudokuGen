@@ -250,7 +250,6 @@ class Grid:
 
         # Get the domain.
         dom = self.domains[x]
-        domc = dom.copy()
         i, j = domain_to_point(x)
 
         # Get arcs to neighbors.
@@ -294,7 +293,7 @@ class Grid:
             self.undo_inference(restore)
 
         # Undo assignments if backtracking.
-        self.domains[x] = domc
+        self.domains[x] = dom
         self.grid[i][j] = 0
         return False
 
