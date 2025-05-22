@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from collections import deque
 
 """
     ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
@@ -21,7 +22,7 @@ import sys
     
     A one-shot upgrade to my 2019 java solver.
         
-    Version 1.0
+    Version 1.1
 """
 
 # Constants.
@@ -86,10 +87,10 @@ class Grid:
         if grid is None:
             # Unary constraint applied to all domains. Value must be an integer in [1,9].
             self.grid = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
-            self.domains = [[_ + 1 for _ in range(VEC_SIZE)] for __ in range(DOM_SIZE)]
+            self.domains = [[x + 1 for x in range(VEC_SIZE)] for __ in range(DOM_SIZE)]
 
             # Initialize first row to generate one of 9! grids.
-            r = np.arange(1, 10)
+            r = np.arange(1, VEC_SIZE + 1)
             np.random.shuffle(r)
             self.grid[0] = r.tolist()
             for i in range(VEC_SIZE):
@@ -102,19 +103,19 @@ class Grid:
 
     # Is the assignment at (i, j) consistent?
     def is_consistent_assignment(self, i, j):
-        ri = i - (i % 3)
-        rj = j - (j % 3)
+        ri = i - (i % SUB_SIZE)
+        rj = j - (j % SUB_SIZE)
 
         row = col = sub = cnt = 0
-        for k in range(9):
+        for k in range(VEC_SIZE):
             # Binary constraint.
             # Rows, cols, sub-grids.
             row += self.grid[i][k] == self.grid[i][j]
             col += self.grid[k][j] == self.grid[i][j]
 
-            k3 = (k % 3)
+            k3 = (k % SUB_SIZE)
             sub += self.grid[ri + cnt][rj + k3] == self.grid[i][j]
-            cnt += k3 == 2
+            cnt += k3 == (SUB_SIZE - 1)
 
         return row < 2 and col < 2 and sub < 2
 
@@ -123,6 +124,7 @@ class Grid:
         rev = False
         old = self.domains[x]
         new = []
+        ov = 0
         for o in old:
             sats = False
 
@@ -137,21 +139,21 @@ class Grid:
             else:
                 rev = True
 
-        self.domains[x] = new
-
-        if len(new) == 1:
+        if rev:
             i, j = domain_to_point(x)
-            self.grid[i][j] = new[0]
+            ov = self.grid[i][j]
+            self.domains[x] = new
+            if len(new) == 1:
+                self.grid[i][j] = new[0]
 
-        return rev, (x, old)
+        return rev, (x, old, ov)
 
     # Do inference by AC-3.
     def do_inference(self, arcs):
-        q = arcs.copy()
+        q = deque(arcs.copy())
         restore = []
         while len(q) > 0:
-            x, y = q[0]
-            q = q[1:]
+            x, y = q.popleft()
 
             rev, old = self.revise(x, y)
 
@@ -170,11 +172,13 @@ class Grid:
 
     # Undo assignments made during inference.
     def undo_inference(self, restore):
-        for x, old in restore:
-            if len(old) > 1:
-                i, j = domain_to_point(x)
-                self.grid[i][j] = 0
+        idx = len(restore) - 1
+        while idx >= 0:
+            x, old, ov = restore[idx]
+            i, j = domain_to_point(x)
+            self.grid[i][j] = ov
             self.domains[x] = old
+            idx -= 1
 
     # Score the values.
     def score_values(self, dom, arcs):
@@ -221,6 +225,18 @@ class Grid:
 
         return next_dom
 
+    # Get all arcs from complete cells.
+    def establish_arc_consistency(self):
+        for i in range(VEC_SIZE):
+            for j in range(VEC_SIZE):
+                if self.grid[i][j] != 0:
+                    arcs = get_arcs(i, j)
+                    infer, _ = self.do_inference(arcs)
+                    if not infer:
+                        return False
+
+        return True
+
     # Solve the Sudoku CSP with backtracking.
     def backtrack(self):
         # Use MRV (Minimum Remaining Values)
@@ -231,10 +247,10 @@ class Grid:
 
         # Print step count.
         self.step += 1
-        # print(f"step {self.step}")
 
         # Get the domain.
         dom = self.domains[x]
+        domc = dom.copy()
         i, j = domain_to_point(x)
 
         # Get arcs to neighbors.
@@ -278,7 +294,7 @@ class Grid:
             self.undo_inference(restore)
 
         # Undo assignments if backtracking.
-        self.domains[x] = dom
+        self.domains[x] = domc
         self.grid[i][j] = 0
         return False
 
@@ -307,8 +323,10 @@ class Grid:
 
         print("Baseline is consistent.")
 
-        idx = np.arange(81)
+        idx = np.arange(DOM_SIZE)
         idx = idx.tolist()
+
+        original = Grid(self)
 
         steps = 0
         empty = 0
@@ -320,49 +338,66 @@ class Grid:
 
             if u == 0:
                 self.grid[i][j] = 0
-                self.domains[x] = [_ + 1 for _ in range(VEC_SIZE)]
+                self.domains[x] = [x + 1 for x in range(VEC_SIZE)]
+                empty += 1
                 continue
 
-            cnt = 0
+            cnt = 1
+            oval = self.grid[i][j]
 
             # This is lazy, but whatever.
-            for p in range(VEC_SIZE):
+            for p in range(1, VEC_SIZE + 1):
+                if oval == p:
+                    continue
+
                 g = Grid(self)
-                g.grid[i][j] = p + 1
-                g.domains[x] = [p + 1]
-                if g.is_consistent_assignment(i, j) and g.backtrack():
-                    cnt += 1
+                g.grid[i][j] = p
+                g.domains[x] = [p]
+                if g.is_consistent_assignment(i, j):
+                    infer = g.establish_arc_consistency()
+                    if infer and g.backtrack():
+                        cnt += 1
 
                 steps += g.step
 
-                if target_empty >= MAD_SIZE:
-                    print(f"Executed {steps} verification steps so far.")
-
-            if cnt <= 1:
+            if cnt == 1:
                 self.grid[i][j] = 0
-                self.domains[x] = [_ + 1 for _ in range(VEC_SIZE)]
+                self.domains[x] = [x + 1 for x in range(VEC_SIZE)]
                 empty += 1
+
+        dup = Grid(self)
+
+        # Final uniqueness check. Just in-case.
+        self.establish_arc_consistency()
+        self.backtrack()
+
+        for h in range(VEC_SIZE):
+            for d in range(VEC_SIZE):
+                if original.grid[h][d] != self.grid[h][d]:
+                    print("Failed to generate a unique solution.")
+                    print("Please write an issue and the author will investigate.")
+                    return
 
         print(f"Unique puzzle Generated. {steps} verification steps taken.")
         print(f"Puzzle has {empty} empty squares of {target_empty} requested.")
-        self.pretty_print()
+        dup.pretty_print()
 
     # Print that puzzle.
     def pretty_print(self):
         print("""_____________________________________________________
 
-    //    / /                                        
-   //___ / /  ___      ___      ___                  
-  / ___   / //   ) ) //   ) ) //   ) ) //   / /      
- //    / / //   / / //___/ / //___/ / ((___/ /       
-//    / / ((___( ( //       //            / /        
-                                      //__              
-    //   ) )                                         
-   ((         ___     //         ( )   __      ___   
+    //    / /
+   //___ / /  ___      ___      ___
+  / ___   / //   ) ) //   ) ) //   ) ) //   / /
+ //    / / //   / / //___/ / //___/ / ((___/ /
+//    / / ((___( ( //       //            / /
+                                      //__
+    //   ) )
+   ((         ___     //         ( )   __      ___
       \\     //   ) ) // ||  / / / / //   ) ) //   ) )
-       ) ) //   / / //  || / / / / //   / / ((___/ / 
-((___ / / ((___/ / //   ||/ / / / //   / /   //__   
-_____________________________________________________ 
+       ) ) //   / / //  || / / / / //   / / ((___/ /
+((___ / / ((___/ / //   ||/ / / / //   / /   //__
+_____________________________________________________
         """)
 
         k = 0
