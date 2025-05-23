@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 from collections import deque
+import datetime as t
 
 """
     ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
@@ -31,6 +32,7 @@ DOM_SIZE = 81
 SUB_SIZE = 3
 BIG_SIZE = 50
 MAD_SIZE = 60
+MU_TO_SC = 1000000
 
 # Convert a point to a domain index.
 def point_to_domain(i, j):
@@ -250,15 +252,14 @@ class Grid:
 
         return next_dom
 
-    # Check all arcs from complete cells.
+    # Check all arcs.
     def establish_arc_consistency(self):
         for i in range(VEC_SIZE):
             for j in range(VEC_SIZE):
-                if self.grid[i][j] != 0:
-                    arcs = get_arcs(i, j)
-                    infer, _ = self.do_inference(arcs)
-                    if not infer:
-                        return False
+                arcs = get_arcs(i, j)
+                infer, _ = self.do_inference(arcs)
+                if not infer:
+                    return False
 
         return True
 
@@ -450,4 +451,6 @@ python Sudoku.py <optional int: target_empty>
 '''
 if __name__ == "__main__":
     g = Grid()
+    epoch = t.datetime.now()
     g.gen_puzzle(target_empty=40 if len(sys.argv) == 1 else int(sys.argv[1]))
+    print(f"\nTime elapsed: {(t.datetime.now() - epoch).microseconds / MU_TO_SC}s")
