@@ -85,19 +85,44 @@ class Grid:
     # Constructor.
     def __init__(self, grid=None):
         if grid is None:
-            # Unary constraint applied to all domains. Value must be an integer in [1,9].
-            self.grid = [[0 for _ in range(VEC_SIZE)] for __ in range(VEC_SIZE)]
-            self.domains = [[x + 1 for x in range(VEC_SIZE)] for __ in range(DOM_SIZE)]
-
-            # Initialize first row to generate one of 9! grids.
-            r = np.arange(1, VEC_SIZE + 1)
+            # Seed the grid.
+            # Example seed:
+            #  7 2 1 | 5 6 9 | 3 8 4
+            #  6 8 5 |       |
+            #  3 4 9 |       |
+            # -------+-------+-------
+            #  1     |       |
+            #  9     |       |
+            #  4     |       |
+            # -------+-------+-------
+            #  5     |       |
+            #  8     |       |
+            #  2     |       |
+            r = np.arange(1, VEC_SIZE + 1, dtype=int)
+            aa = r.copy()
             np.random.shuffle(r)
-            self.grid[0] = r.tolist()
-            for i in range(VEC_SIZE):
-                self.domains[i] = [self.grid[0][i]]
+            r = r.reshape(3, 3)
+            u = r.copy()
+            w = r.copy()
+            u = np.delete(u, 0, axis=0)
+            w = np.delete(w, 0, axis=1)
+            u = u.flatten()
+            w = w.reshape(6, 1)
+            np.random.shuffle(u)
+            np.random.shuffle(w)
+            a = np.zeros(DOM_SIZE, dtype=int).reshape(9, 9)
+            a[:r.shape[0], :r.shape[1]] = r
+            a[0, SUB_SIZE:SUB_SIZE + u.shape[0]] = u
+            a[SUB_SIZE:SUB_SIZE + w.shape[0], :w.shape[1]] = w
+            self.grid = a.tolist()
+
+            # Unary constraint applied to all domains. Value must be an integer in [1,9].
+            a = a.reshape(DOM_SIZE, 1)
+            a = a.tolist()
+            self.domains = [aa.copy() if a[xx][0] == 0 else a[xx] for xx in range(DOM_SIZE)]
         else:
-            self.grid = [grid.grid[__].copy() for __ in range(VEC_SIZE)]
-            self.domains = [grid.domains[__].copy() for __ in range(DOM_SIZE)]
+            self.grid = [grid.grid[x].copy() for x in range(VEC_SIZE)]
+            self.domains = [grid.domains[x].copy() for x in range(DOM_SIZE)]
 
         self.step = 0
 
@@ -310,6 +335,7 @@ class Grid:
                 print("Empty square target is excessive.")
                 print("A smaller target will yield similar results.")
 
+        self.establish_arc_consistency()
         self.backtrack()
         print(f"Baseline generated in {self.step} steps.")
 
