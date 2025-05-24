@@ -59,7 +59,7 @@ def cache_arcs(i, j):
         if start_s != cell:
             arcs.append((start_s, cell))
 
-        start_s += 1 + (6 & -(o % SUB_SIZE == 2))
+        start_s += 1 + ((SUB_SIZE << 1) & -(o % SUB_SIZE == 2))
         start_c += VEC_SIZE
 
     return arcs
@@ -103,16 +103,16 @@ class Grid:
             r = np.arange(1, VEC_SIZE + 1, dtype=int)
             aa = r.copy()
             np.random.shuffle(r)
-            r = r.reshape(3, 3)
+            r = r.reshape(SUB_SIZE, SUB_SIZE)
             u = r.copy()
             w = r.copy()
             u = np.delete(u, 0, axis=0)
             w = np.delete(w, 0, axis=1)
             u = u.flatten()
-            w = w.reshape(6, 1)
+            w = w.reshape(SUB_SIZE << 1, 1)
             np.random.shuffle(u)
             np.random.shuffle(w)
-            a = np.zeros(DOM_SIZE, dtype=int).reshape(9, 9)
+            a = np.zeros(DOM_SIZE, dtype=int).reshape(VEC_SIZE, VEC_SIZE)
             a[:r.shape[0], :r.shape[1]] = r
             a[0, SUB_SIZE:SUB_SIZE + u.shape[0]] = u
             a[SUB_SIZE:SUB_SIZE + w.shape[0], :w.shape[1]] = w
