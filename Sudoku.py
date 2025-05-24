@@ -224,12 +224,12 @@ class Grid:
         if idx >= len(dom):
             return 0, idx
 
-        mx = score[idx]
+        mn = score[idx]
         x = idx
         for i in range(idx, len(dom)):
-            if score[i] > mx:
+            if score[i] < mn:
                 x = i
-                mx = score[x]
+                mn = score[x]
 
         value = dom[x]
         dom[x] = dom[idx]
